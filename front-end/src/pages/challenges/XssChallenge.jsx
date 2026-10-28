@@ -16,7 +16,7 @@ export default function XssChallenge() {
     try {
       setComments(await myfetch.get('/challenges/xss/comments'))
     }
-    catch (error) {
+    catch(error) {
       setError(error.message)
     }
   }
@@ -31,7 +31,7 @@ export default function XssChallenge() {
       setContent('')
       await loadComments()
     }
-    catch (error) {
+    catch(error) {
       setError(error.message)
     }
   }
@@ -64,13 +64,7 @@ export default function XssChallenge() {
       {/* OWASP Top 10:2025 A05 - Injeção (XSS armazenado):
           dangerouslySetInnerHTML interpreta o comentário como HTML sem escape ou sanitização. */}
       {comments.map(comment => (
-        <Typography
-          key={comment.id}
-          component="p"
-          sx={{ overflowWrap: 'anywhere' }}
-        >
-          {comment.content}
-        </Typography>
+      <div key={comment.id} dangerouslySetInnerHTML={{ __html: `<p>${comment.content}</p>` }} />
       ))}
     </Paper>
   </Stack>
