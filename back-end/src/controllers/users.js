@@ -1,5 +1,13 @@
 import prisma from '../database/client.js'
 import jwt from 'jsonwebtoken'
+import argon2 from 'argon2'
+
+const argon2Options = {
+  type: argon2.argon2id,
+  memoryCost: 66560,
+  timeCost: 3,
+  parallelism: 4
+}
 
 const controller = {}     // Objeto vazio
 
@@ -8,8 +16,12 @@ controller.create = async function(req, res) {
 
     // OWASP Top 10:2025 A01 - Falha no Controle de Acesso:
     // atribuição em massa permite ao cliente definir campos sensíveis, como is_admin.
-    // OWASP Top 10:2025 A04 - Falhas de Criptografia: password é persistido sem hash.
-    await prisma.user.create({ data: req.body })
+    const data = {
+      ...req.body,
+      password: await argon2.hash(req.body.password, argon2Options)
+    }
+
+    await prisma.user.create({ data })
 
     // HTTP 201: Created
     res.status(201).end()
@@ -24,8 +36,6 @@ controller.create = async function(req, res) {
 
 controller.retrieveAll = async function(req, res) {
   try {
-    // OWASP Top 10:2025 A01 - Falha no Controle de Acesso:
-    // a consulta expõe todos os campos dos usuários, incluindo a senha em texto puro (A04).
     const result = await prisma.user.findMany()
 
     // HTTP 200: OK (implícito)
@@ -41,8 +51,6 @@ controller.retrieveAll = async function(req, res) {
 
 controller.retrieveOne = async function(req, res) {
   try {
-    // OWASP Top 10:2025 A01 - Falha no Controle de Acesso:
-    // o ID recebido permite consultar qualquer usuário, incluindo seu campo password.
     const result = await prisma.user.findUnique({
       where: { id: Number(req.params.id) }
     })
@@ -63,12 +71,15 @@ controller.retrieveOne = async function(req, res) {
 controller.update = async function(req, res) {
   try {
 
-    // OWASP Top 10:2025 A01 - Falha no Controle de Acesso:
-    // o cliente pode alterar is_admin e password de qualquer usuário por atribuição em massa.
-    // OWASP Top 10:2025 A04 - Falhas de Criptografia: a nova senha também é gravada sem hash.
+    const data = { ...req.body }
+
+    if(data.password) {
+      data.password = await argon2.hash(data.password, argon2Options)
+    }
+
     const result = await prisma.user.update({
       where: { id: Number(req.params.id) },
-      data: req.body
+      data
     })
 
     // Encontrou e atualizou ~> HTTP 204: No Content
@@ -126,24 +137,18 @@ controller.login = async function(req, res) {
       // HTTP 401: Unauthorized
       if(! user) return res.status(401).end()
 
-      // Usuário encontrado, vamos conferir a senha
-      // OWASP Top 10:2025 A07 - Falhas de Autenticação:
-      // a credencial fixa admin/admin123 ignora a senha cadastrada para esse usuário.
-      // OWASP Top 10:2025 A04 - Falhas de Criptografia:
-      // a comparação direta usa a senha armazenada em texto puro, sem hash adaptativo.
-      let passwordIsValid
-      if(req.body?.username === 'admin' && req.body?.password === 'admin123') passwordIsValid = true
-      else passwordIsValid = user.password === req.body?.password
+      // Usuário encontrado, vamos conferir a senha usando o hash Argon2id.
+      const passwordIsValid = await argon2.verify(
+        user.password,
+        req.body?.password
+      )
 
       // Se a senha estiver errada, retorna
       // HTTP 401: Unauthorized
       if(! passwordIsValid) return res.status(401).end()
 
-      // Usuário e senha OK, passamos ao procedimento de gerar o token
-      // OWASP Top 10:2025 A04 - Falhas de Criptografia:
-      // o JWT inclui password; a assinatura garante integridade, mas não oculta o conteúdo.
       const token = jwt.sign(
-        user,                       // Dados do usuário
+        user,                      // Dados do usuário
         process.env.TOKEN_SECRET,   // Senha para criptografar o token
         { expiresIn: '24h' }        // Prazo de validade do token
       )
@@ -159,8 +164,6 @@ controller.login = async function(req, res) {
 
       // Retorna o token e o usuário autenticado com
       // HTTP 200: OK (implícito)
-      // OWASP Top 10:2025 A04 - Falhas de Criptografia:
-      // a resposta também expõe a senha em texto puro no objeto user.
       res.send({token, user})
 
   }

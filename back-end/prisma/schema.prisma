@@ -72,4 +72,3 @@ model XssComment {
   content    String
   created_at DateTime @default(now())
 }
-
