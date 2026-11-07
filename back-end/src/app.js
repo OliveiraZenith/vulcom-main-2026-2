@@ -28,6 +28,11 @@ app.use(json())
 app.use(urlencoded({ extended: false }))
 app.use(cookieParser())
 
+/***** MIDDLEWARE DE AUTENTICAÇÃO ******/
+
+import auth from './middleware/auth.js'
+app.use(auth)
+
 
 /*********** ROTAS DA API **************/
 

@@ -9,6 +9,14 @@ const argon2Options = {
   parallelism: 4
 }
 
+const publicUserSelect = {
+  id: true,
+  fullname: true,
+  username: true,
+  email: true,
+  is_admin: true
+}
+
 const controller = {}     // Objeto vazio
 
 controller.create = async function(req, res) {
@@ -36,7 +44,9 @@ controller.create = async function(req, res) {
 
 controller.retrieveAll = async function(req, res) {
   try {
-    const result = await prisma.user.findMany()
+    const result = await prisma.user.findMany({
+      select: publicUserSelect
+    })
 
     // HTTP 200: OK (implícito)
     res.send(result)
@@ -52,7 +62,8 @@ controller.retrieveAll = async function(req, res) {
 controller.retrieveOne = async function(req, res) {
   try {
     const result = await prisma.user.findUnique({
-      where: { id: Number(req.params.id) }
+      where: { id: Number(req.params.id) },
+      select: publicUserSelect
     })
 
     // Encontrou ~> retorna HTTP 200: OK (implícito)
