@@ -21,22 +21,28 @@ const myfetch = {}  // Objeto vazio
 const baseUrl = import.meta.env.VITE_API_BASE
 
 function getOptions(body = null, method = 'GET') {
-  const options = {
-    method,
-    headers: {"Content-type": "application/json; charset=UTF-8"},
-    //  credentials: 'include'  // Instrui o back-end a gravar cookies no front
-  }
+ const options = {
+   method,
+   headers: {"Content-type": "application/json; charset=UTF-8"},
+   credentials: 'include'  // Instrui o protocolo HTTP(S) a enviar os cookies de volta
+ }
 
-  if(body) options.body = JSON.stringify(body)
 
-  // Verifica se existe um token gravado no localStorage e o inclui
-  // nos headers, nesse caso
-  const token = window.localStorage.getItem(import.meta.env.VITE_AUTH_TOKEN_NAME)
+ if(body) options.body = JSON.stringify(body)
 
-  if(token) options.headers.authorization = `Bearer ${token}`
 
-  return options
+ // ** NÃO PRECISAMOS MAIS PROCURAR O TOKEN NO LOCAL STORAGE ***
+ // Verifica se existe um token gravado no localStorage e o inclui
+ // nos headers, nesse caso
+ //const token = window.localStorage.getItem(import.meta.env.VITE_AUTH_TOKEN_NAME)
+
+
+ //if(token) options.headers.authorization = `Bearer ${token}`
+
+
+ return options
 }
+
 
 function getErrorDescription(response) {
   switch(response.status) {
